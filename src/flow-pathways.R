@@ -26,6 +26,13 @@ source(file.path(pkg_dir, "helpers.R"))
 CBMDatabase <- datasheet(myLibrary, "stsimcbmcfs3_Database")[1,"Path"]
 crosswalkStratumState <- datasheet(myScenario, "stsimcbmcfs3_CrosswalkSpecies", 
                                    optional = T)
+NACount <- sum(is.na(crosswalkStratumState$SecondaryStratumID))
+if (NACount > 0 && NACount < nrow(crosswalkStratumState)){
+  stop("All secondary stratum must be specified or all must be left blank")
+}
+if (NACount == nrow(crosswalkStratumState)){
+  SSIsWildCard <-  TRUE
+}
 crosswalkStock <- datasheet(myScenario, "stsimcbmcfs3_CrosswalkStock")
 
 # crosswalkStock[16, 1] <- "Products"
@@ -357,7 +364,11 @@ for(i in 1: nrow(crosswalkStratumState)){
     stateAttributeValuesWide <- spread(stateAttributeValues, key="StateAttributeTypeID", value = "Value")
     carbonInitialConditions <- datasheet(myScenario, "stsimsf_InitialStockNonSpatial", empty=FALSE, optional=TRUE)
     
-    volumeToCarbon <- filter(stateAttributeValuesWide, StratumID == crosswalkStratumState$StratumID[i] & SecondaryStratumID == crosswalkStratumState$SecondaryStratumID[i] & StateClassID == crosswalkStratumState$StateClassID[i])
+    if (SSIsWildCard){
+      volumeToCarbon <- filter(stateAttributeValuesWide, StratumID == crosswalkStratumState$StratumID[i] & StateClassID == crosswalkStratumState$StateClassID[i])
+    } else {
+      volumeToCarbon <- filter(stateAttributeValuesWide, StratumID == crosswalkStratumState$StratumID[i] & SecondaryStratumID == crosswalkStratumState$SecondaryStratumID[i] & StateClassID == crosswalkStratumState$StateClassID[i])
+    }
     volumeToCarbon$c_m <- volumeToCarbon[, as.character(carbonInitialConditions$StateAttributeTypeID[carbonInitialConditions$StockTypeID == crossSF("Merchantable")])]
     volumeToCarbon$c_foliage <- volumeToCarbon[, as.character(carbonInitialConditions$StateAttributeTypeID[carbonInitialConditions$StockTypeID == crossSF("Foliage")])]
     volumeToCarbon$c_other <- volumeToCarbon[, as.character(carbonInitialConditions$StateAttributeTypeID[carbonInitialConditions$StockTypeID == crossSF("Other")])]
@@ -404,7 +415,11 @@ for(i in 1: nrow(crosswalkStratumState)){
     # temporary load merchantable volume from csv
     # linear curve only for now
     
-    grossMerchantableVolumeFiltered = filter(grossMerchantableVolume, StratumID == crosswalkStratumState$StratumID[i] & SecondaryStratumID == crosswalkStratumState$SecondaryStratumID[i] & StateClassID == crosswalkStratumState$StateClassID[i])
+    if (SSIsWildCard){
+      grossMerchantableVolumeFiltered = filter(grossMerchantableVolume, StratumID == crosswalkStratumState$StratumID[i] & StateClassID == crosswalkStratumState$StateClassID[i])
+    } else {
+      grossMerchantableVolumeFiltered = filter(grossMerchantableVolume, StratumID == crosswalkStratumState$StratumID[i] & SecondaryStratumID == crosswalkStratumState$SecondaryStratumID[i] & StateClassID == crosswalkStratumState$StateClassID[i])
+    }
     volumeToCarbon <- data.frame(age = grossMerchantableVolumeFiltered$Age, volume = grossMerchantableVolumeFiltered$MerchantableVolume)
     volumeToCarbon$StratumID = crosswalkStratumState$StratumID[i]
     volumeToCarbon$SecondaryStratumID = crosswalkStratumState$SecondaryStratumID[i]
